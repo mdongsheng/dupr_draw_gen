@@ -92,31 +92,6 @@ enum XLSXTemplateFiller {
         return ZipArchive.write(entries)
     }
 
-    /// 叫场顺序表：把共享字符串中的 "A1 vs A6" 替换为 "A1 鹅蛋/Andy vs A6 Baymax Lin/YUNCHENG"。
-    /// 没有对应队伍的位置保留原编号。
-    static func fillSchedule(template: Data, groups: [DrawGroup]) throws -> Data {
-        var entries = try ZipArchive.read(template)
-        guard let index = entries.firstIndex(where: { $0.path == "xl/sharedStrings.xml" }),
-              let xml = String(data: entries[index].data, encoding: .utf8) else { return template }
-
-        func label(_ letter: Substring, _ number: Substring) -> String {
-            let code = "\(letter)\(number)"
-            guard let slot = Int(number),
-                  let teams = groups.first(where: { $0.letter == String(letter) })?.teams,
-                  teams.indices.contains(slot - 1) else { return code }
-            return "\(code) \(teams[slot - 1])"
-        }
-
-        let pattern = #/^([A-Z])(\d{1,2})\s*vs\s*([A-Z])(\d{1,2})$/#
-        let filled = SharedStrings.mapPlainItems(in: xml) { text in
-            guard let match = text.firstMatch(of: pattern) else { return nil }
-            let (_, letter1, number1, letter2, number2) = match.output
-            return label(letter1, number1) + " vs " + label(letter2, number2)
-        }
-        entries[index].data = Data(filled.utf8)
-        return ZipArchive.write(entries)
-    }
-
     // MARK: Worksheet
 
     static func worksheetEntry(in entries: [ZipArchive.Entry]) -> ZipArchive.Entry? {
@@ -162,15 +137,6 @@ enum XLSXTemplateFiller {
 // MARK: - Shared strings
 
 private enum SharedStrings {
-    /// 对每个纯文本条目调用 transform（参数为未转义文本），返回非 nil 时替换该条目。
-    static func mapPlainItems(in xml: String, transform: (String) -> String?) -> String {
-        xml.replacing(#/<si>(.*?)</si>/#.dotMatchesNewlines()) { match in
-            guard let escaped = plainText(of: String(match.output.1)),
-                  let replacement = transform(XML.unescape(escaped)) else { return String(match.output.0) }
-            return #"<si><t xml:space="preserve">\#(XML.escape(replacement))</t></si>"#
-        }
-    }
-
     /// 返回 text 在共享字符串表中的索引；不存在则追加。
     static func index(of text: String, in xml: inout String) -> Int {
         let escaped = XML.escape(text)
@@ -209,14 +175,6 @@ private enum SharedStrings {
 }
 
 enum XML {
-    static func unescape(_ text: String) -> String {
-        text.replacingOccurrences(of: "&lt;", with: "<")
-            .replacingOccurrences(of: "&gt;", with: ">")
-            .replacingOccurrences(of: "&quot;", with: "\"")
-            .replacingOccurrences(of: "&apos;", with: "'")
-            .replacingOccurrences(of: "&amp;", with: "&")
-    }
-
     static func escape(_ text: String) -> String {
         var result = ""
         result.reserveCapacity(text.count)

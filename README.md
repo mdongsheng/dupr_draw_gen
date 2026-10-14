@@ -24,7 +24,7 @@
 ## 打印
 
 - 应用内打印：按模板样式（配色、边框、斜线、合并单元格）把 `A1:K9`、`A10:K18` 各渲染为一页 A4 横向 PDF，再调起系统打印面板。
-- 第 3 页为叫场顺序（`DrawGen/Resources/schedule.xlsx`，按其打印区域 `A1:E18`）：表中 `A1 vs A6` 这类编号会替换为 `A1 鹅蛋/Andy vs A6 Baymax Lin/YUNCHENG`；放不下时自动缩小字号。
+- 第 3 页为叫场顺序（`DrawGen/Resources/schedule.xlsx`，按其打印区域 `A1:E18`），内容固定，现场按 A1/B1 等编号叫场；替换该文件即可调整赛程。
 - 生成的 xlsx 也写好了打印设置（A4 横向、宽度缩放到一页、两个打印区域各占一页），在 Excel / Numbers 中直接打印效果相同。
 - 打印区域定义在 `TemplateLayout.standard.printRanges`。
 

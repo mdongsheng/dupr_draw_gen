@@ -286,11 +286,11 @@ struct ContentView: View {
         }
     }
 
-    /// 打印页：A 组、B 组（来自生成的表格），再加叫场顺序表，均为 A4 横向。
+    /// 打印页：A 组、B 组（来自生成的表格），再加固定的叫场顺序表（按 A1/B1 编号叫场），均为 A4 横向。
     private func printPDF(from data: Data) throws -> Data {
         var pages = XLSXPrintRenderer.pages(of: try XLSXWorkbook(xlsx: data), ranges: layout.printRanges)
         if let template = TemplateStore.scheduleTemplate() {
-            let schedule = try XLSXWorkbook(xlsx: XLSXTemplateFiller.fillSchedule(template: template, groups: groups))
+            let schedule = try XLSXWorkbook(xlsx: template)
             pages += schedule.pageRanges.map { XLSXPrintRenderer.Page(workbook: schedule, range: $0) }
         }
         return XLSXPrintRenderer.pdf(pages)
