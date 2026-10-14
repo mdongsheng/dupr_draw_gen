@@ -19,7 +19,13 @@
 
    分组标题支持 `A组`、`A 组：`、`Group A`；行首编号 `1.`、`1、` 会自动去掉。
 2. 下方实时预览每个位置（A1…A6 / B1…B6）对应的队伍，数量不对或重复会提示。
-3. 点「生成 Excel」，在预览页右上角分享 / 存储到文件。生成的文件也保存在「文件 › 我的 iPhone › 对阵表」。
+3. 点「生成 Excel」，预览页可在「表格 / 打印预览」间切换；右上角可**打印**（A 组一页、B 组一页，A4 横向），或分享 Excel / PDF。生成的文件也保存在「文件 › 我的 iPhone › 对阵表」。
+
+## 打印
+
+- 应用内打印：按模板样式（配色、边框、斜线、合并单元格）把 `A1:K9`、`A10:K18` 各渲染为一页 A4 横向 PDF，再调起系统打印面板。
+- 生成的 xlsx 也写好了打印设置（A4 横向、宽度缩放到一页、两个打印区域各占一页），在 Excel / Numbers 中直接打印效果相同。
+- 打印区域定义在 `TemplateLayout.standard.printRanges`。
 
 ## 模板
 
@@ -42,7 +48,8 @@
 ```
 DrawGen/
   DrawGenApp.swift
-  Models/   DrawParser（解析名单与校验）、TemplateStore（模板与导出路径）
-  Excel/    ZipArchive（xlsx 读写，基于系统 Compression）、XLSXTemplateFiller（写入单元格）
+  Models/   DrawParser（解析名单与校验）、TemplateStore（模板与导出路径）、PrintService（系统打印）
+  Excel/    ZipArchive（xlsx 读写，基于系统 Compression）、XLSXTemplateFiller（写入单元格）、
+            PrintSetup（xlsx 打印设置）、XLSXWorkbook + XLSXPrintRenderer（读取样式并渲染打印 PDF）
   Views/    ContentView、GroupCard、ResultView（QuickLook 预览 + 分享）、Theme
 ```

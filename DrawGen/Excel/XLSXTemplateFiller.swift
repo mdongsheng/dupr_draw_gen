@@ -13,6 +13,8 @@ struct TemplateLayout {
     }
 
     let groups: [Group]
+    /// 打印时每页对应的区域（每组一页，横向）。
+    let printRanges: [String]
 
     func capacity(of letter: String) -> Int {
         groups.first { $0.letter == letter }?.slots.count ?? 0
@@ -21,7 +23,7 @@ struct TemplateLayout {
     static let standard = TemplateLayout(groups: [
         roundRobin(letter: "A", headerRow: 3, firstSideRow: 4),
         roundRobin(letter: "B", headerRow: 12, firstSideRow: 13),
-    ])
+    ], printRanges: ["A1:K9", "A10:K18"])
 
     /// 循环赛交叉表：横向表头从 C 列开始，纵向表头在 B 列。
     private static func roundRobin(letter: String, headerRow: Int, firstSideRow: Int, size: Int = 6) -> Group {
@@ -86,10 +88,15 @@ enum XLSXTemplateFiller {
         if let sharedIndex, let sharedStrings {
             entries[sharedIndex].data = Data(sharedStrings.utf8)
         }
+        PrintSetup.apply(layout.printRanges, to: &entries, sheetIndex: sheetIndex)
         return ZipArchive.write(entries)
     }
 
     // MARK: Worksheet
+
+    static func worksheetEntry(in entries: [ZipArchive.Entry]) -> ZipArchive.Entry? {
+        worksheetIndex(in: entries).map { entries[$0] }
+    }
 
     private static func worksheetIndex(in entries: [ZipArchive.Entry]) -> Int? {
         entries.firstIndex { $0.path == "xl/worksheets/sheet1.xml" }

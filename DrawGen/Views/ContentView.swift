@@ -267,10 +267,14 @@ struct ContentView: View {
         do {
             let template = try TemplateStore.currentTemplate(useCustom: useCustomTemplate)
             let data = try XLSXTemplateFiller.fill(template: template, groups: groups, layout: layout)
-            let url = TemplateStore.exportURL()
-            try data.write(to: url, options: .atomic)
+            let excelURL = TemplateStore.exportURL()
+            try data.write(to: excelURL, options: .atomic)
+
+            let pdfURL = excelURL.deletingPathExtension().appendingPathExtension("pdf")
+            try XLSXPrintRenderer.pdf(from: data, ranges: layout.printRanges).write(to: pdfURL, options: .atomic)
+
             successTick += 1
-            generated = GeneratedFile(url: url)
+            generated = GeneratedFile(excelURL: excelURL, pdfURL: pdfURL)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -287,8 +291,10 @@ struct ContentView: View {
 }
 
 struct GeneratedFile: Identifiable {
-    let url: URL
-    var id: URL { url }
+    let excelURL: URL
+    /// 打印用 PDF：每组一页，A4 横向。
+    let pdfURL: URL
+    var id: URL { excelURL }
 }
 
 private extension UTType {
