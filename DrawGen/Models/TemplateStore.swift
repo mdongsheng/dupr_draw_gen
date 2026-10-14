@@ -16,6 +16,11 @@ enum TemplateStore {
         Bundle.main.url(forResource: "template", withExtension: "xlsx")
     }
 
+    /// 叫场顺序表模板（打印时追加在分组表之后）。
+    static func scheduleTemplate() -> Data? {
+        Bundle.main.url(forResource: "schedule", withExtension: "xlsx").flatMap { try? Data(contentsOf: $0) }
+    }
+
     /// 当前模板数据：优先使用导入的模板。
     static func currentTemplate(useCustom: Bool) throws -> Data {
         if useCustom, let data = try? Data(contentsOf: customTemplateURL) {

@@ -135,6 +135,7 @@ struct XLSXWorkbook {
         var bottom = false
         var diagonalDown = false
         var diagonalUp = false
+        var color: RGBColor = .black
     }
 
     struct Format {
@@ -153,6 +154,17 @@ struct XLSXWorkbook {
     var rowHeights: [Int: Double] = [:]     // 磅
     var defaultRowHeight: Double = 15
     var merges: [CellRange] = []
+    /// 工作簿中定义的打印区域（_xlnm.Print_Area），可能为空。
+    var printAreas: [CellRange] = []
+
+    /// 打印区域；未定义时返回包含所有单元格的范围。
+    var pageRanges: [CellRange] {
+        if !printAreas.isEmpty { return printAreas }
+        let refs = cells.keys
+        guard let maxRow = refs.map(\.row).max(), let maxColumn = refs.map(\.column).max(),
+              let range = CellRange("A1:\(PrintSetup.columnName(maxColumn))\(maxRow)") else { return [] }
+        return [range]
+    }
 
     func format(of ref: CellRef) -> Format {
         guard let style = cells[ref]?.style, formats.indices.contains(style) else { return formats.first ?? Format() }
@@ -227,7 +239,23 @@ struct XLSXWorkbook {
             }
         }
 
+        if let workbook = node("xl/workbook.xml") {
+            printAreas = Self.printAreas(in: workbook)
+        }
+
         merges = (sheet.child("mergeCells")?.children("mergeCell") ?? []).compactMap { $0["ref"].flatMap { CellRange($0) } }
+    }
+
+    /// 读取第一个工作表的打印区域，如 "完整赛程!$A$1:$E$18" 或 "'Sheet 1'!$A$1:$K$9,'Sheet 1'!$A$10:$K$18"。
+    private static func printAreas(in workbook: XMLNode) -> [CellRange] {
+        let names = workbook.child("definedNames")?.children("definedName") ?? []
+        guard let printArea = names.first(where: { $0["name"] == "_xlnm.Print_Area" && ($0["localSheetId"] ?? "0") == "0" }) else {
+            return []
+        }
+        return printArea.text.split(separator: ",").compactMap { part in
+            let reference = part.split(separator: "!").last.map(String.init) ?? String(part)
+            return CellRange(reference)
+        }
     }
 
     private static func sharedStrings(_ root: XMLNode) -> [String] {
@@ -293,10 +321,15 @@ struct XLSXWorkbook {
                 return style != "none"
             }
             let diagonal = has("diagonal")
+            let edgeColor = ["left", "right", "top", "bottom", "diagonal"].compactMap { edge -> RGBColor? in
+                guard let element = node.child(edge), element["style"] != nil else { return nil }
+                return Self.color(element.child("color"), theme: theme)
+            }.first
             return Border(
                 left: has("left"), right: has("right"), top: has("top"), bottom: has("bottom"),
                 diagonalDown: diagonal && node["diagonalDown"] == "1",
-                diagonalUp: diagonal && node["diagonalUp"] == "1"
+                diagonalUp: diagonal && node["diagonalUp"] == "1",
+                color: edgeColor ?? .black
             )
         }
 

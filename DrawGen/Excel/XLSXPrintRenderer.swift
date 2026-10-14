@@ -6,14 +6,22 @@ enum XLSXPrintRenderer {
     static let pageBounds = CGRect(x: 0, y: 0, width: 842, height: 595)
     private static let margin: CGFloat = 30
 
-    static func pdf(from xlsx: Data, ranges: [String]) throws -> Data {
-        let workbook = try XLSXWorkbook(xlsx: xlsx)
-        let pages = ranges.compactMap { CellRange($0) }
+    /// 一页：某个工作簿中的一个区域。
+    struct Page {
+        let workbook: XLSXWorkbook
+        let range: CellRange
+    }
+
+    static func pages(of workbook: XLSXWorkbook, ranges: [String]) -> [Page] {
+        ranges.compactMap { CellRange($0) }.map { Page(workbook: workbook, range: $0) }
+    }
+
+    static func pdf(_ pages: [Page]) -> Data {
         let renderer = UIGraphicsPDFRenderer(bounds: pageBounds)
         return renderer.pdfData { context in
-            for range in pages {
+            for page in pages {
                 context.beginPage()
-                draw(range, of: workbook, in: pageBounds.insetBy(dx: margin, dy: margin), context: context.cgContext)
+                draw(page.range, of: page.workbook, in: pageBounds.insetBy(dx: margin, dy: margin), context: context.cgContext)
             }
         }
     }
@@ -80,18 +88,20 @@ enum XLSXPrintRenderer {
         for item in items where !item.text.isEmpty {
             drawText(item.text, format: item.format, in: item.rect, scale: scale)
         }
-        context.setStrokeColor(UIColor.black.cgColor)
         context.setLineWidth(max(0.5, 0.75 * scale))
         for item in items {
+            context.setStrokeColor(UIColor(rgb: item.format.border.color).cgColor)
             strokeBorder(item.format.border, of: item.rect, context: context)
         }
     }
 
     private static func drawText(_ text: String, format: XLSXWorkbook.Format, in rect: CGRect, scale: CGFloat) {
         let font = format.font
-        var uiFont = UIFont.systemFont(ofSize: CGFloat(font.size) * scale, weight: font.bold ? .bold : .regular)
-        if font.italic, let descriptor = uiFont.fontDescriptor.withSymbolicTraits(uiFont.fontDescriptor.symbolicTraits.union(.traitItalic)) {
-            uiFont = UIFont(descriptor: descriptor, size: 0)
+        func makeFont(_ size: CGFloat) -> UIFont {
+            let base = UIFont.systemFont(ofSize: size, weight: font.bold ? .bold : .regular)
+            guard font.italic,
+                  let descriptor = base.fontDescriptor.withSymbolicTraits(base.fontDescriptor.symbolicTraits.union(.traitItalic)) else { return base }
+            return UIFont(descriptor: descriptor, size: size)
         }
 
         let paragraph = NSMutableParagraphStyle()
@@ -102,21 +112,24 @@ enum XLSXPrintRenderer {
         }
         paragraph.lineBreakMode = format.wrap ? .byWordWrapping : .byClipping
 
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: uiFont,
-            .foregroundColor: UIColor(rgb: font.color),
-            .paragraphStyle: paragraph,
-        ]
-
         let inset = 3 * scale
         var box = rect.insetBy(dx: inset, dy: inset * 0.5)
         let string = text as NSString
-        let measured = string.boundingRect(
-            with: CGSize(width: format.wrap ? box.width : .greatestFiniteMagnitude, height: .greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            attributes: attributes,
-            context: nil
-        )
+
+        // 换行后仍放不下时逐步缩小字号（最小到原来的 55%）
+        var size = CGFloat(font.size) * scale
+        var attributes: [NSAttributedString.Key: Any] = [:]
+        var measured = CGRect.zero
+        repeat {
+            attributes = [.font: makeFont(size), .foregroundColor: UIColor(rgb: font.color), .paragraphStyle: paragraph]
+            measured = string.boundingRect(
+                with: CGSize(width: format.wrap ? box.width : .greatestFiniteMagnitude, height: .greatestFiniteMagnitude),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                attributes: attributes,
+                context: nil
+            )
+            size *= 0.92
+        } while format.wrap && measured.height > box.height && size > CGFloat(font.size) * scale * 0.55
 
         // 不换行且超宽时，像 Excel 一样向两侧溢出
         if !format.wrap, measured.width > box.width {

@@ -277,13 +277,23 @@ struct ContentView: View {
             try data.write(to: excelURL, options: .atomic)
 
             let pdfURL = excelURL.deletingPathExtension().appendingPathExtension("pdf")
-            try XLSXPrintRenderer.pdf(from: data, ranges: layout.printRanges).write(to: pdfURL, options: .atomic)
+            try printPDF(from: data).write(to: pdfURL, options: .atomic)
 
             successTick += 1
             generated = GeneratedFile(excelURL: excelURL, pdfURL: pdfURL)
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    /// 打印页：A 组、B 组（来自生成的表格），再加叫场顺序表，均为 A4 横向。
+    private func printPDF(from data: Data) throws -> Data {
+        var pages = XLSXPrintRenderer.pages(of: try XLSXWorkbook(xlsx: data), ranges: layout.printRanges)
+        if let template = TemplateStore.scheduleTemplate() {
+            let schedule = try XLSXWorkbook(xlsx: XLSXTemplateFiller.fillSchedule(template: template, groups: groups))
+            pages += schedule.pageRanges.map { XLSXPrintRenderer.Page(workbook: schedule, range: $0) }
+        }
+        return XLSXPrintRenderer.pdf(pages)
     }
 
     private func importTemplate(_ result: Result<URL, Error>) {

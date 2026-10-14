@@ -61,7 +61,7 @@ enum PrintSetup {
 
     // MARK: Helpers
 
-    private static func columnName(_ column: Int) -> String {
+    static func columnName(_ column: Int) -> String {
         var column = column
         var name = ""
         while column > 0 {
