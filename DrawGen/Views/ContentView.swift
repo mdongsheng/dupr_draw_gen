@@ -62,16 +62,22 @@ struct ContentView: View {
     // MARK: Sections
 
     private var hero: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("PICKLEBALL · DUPR")
-                .font(.caption.weight(.bold))
-                .tracking(2)
-                .foregroundStyle(Theme.color(for: "A"))
-            Text("对阵表生成")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
-            Text("粘贴分组名单，一键填入 Excel 模板。")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 16) {
+            Image("BrandLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(height: 64)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .shadow(color: .black.opacity(0.18), radius: 10, y: 4)
+                .accessibilityLabel("大美友约 Pickleball Club")
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text("DUPR对阵表")
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                Text("粘贴分组名单，一键填入 Excel 模板。")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(.top, 12)
     }

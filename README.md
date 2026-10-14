@@ -1,4 +1,4 @@
-# 对阵表生成（DrawGen）
+# DUPR对阵表
 
 一个简洁的 iOS 应用：粘贴分组名单，一键把队伍填入 Excel 对阵表模板（`A1–A6`、`B1–B6`），并可预览、分享或存到「文件」。
 
@@ -42,6 +42,10 @@
 
 - Xcode 16 或更高，iOS 17+，无第三方依赖。
 - 打开 `DrawGen.xcodeproj`，在 Signing & Capabilities 中选择你的 Team 后运行。
+
+## 品牌
+
+- App 图标与首页 Logo 来自「大美友约 Pickleball Club」标志（`DrawGen/Assets.xcassets/AppIcon`、`BrandLogo`），源文件见 `Design/logo.ai`。
 
 ## 结构
 
